@@ -1,69 +1,81 @@
 ---
-title: ''
-output: html_document
+title: 'Exploring the relationship between altmetrics and traditional measures of dissemination in health professions education'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
-library(corrplot)
+Library a few packages in the for the exploratory analysis and models.
+```{r, warning = FALSE, message = FALSE}
 library(ggplot2)
 library(gridExtra)
 library(psych)
-library(reshape)
-library(COUNT)
-
-setwd("E:/USU/LEROUX/RESEARCH/TWEETS")
-
-dta <- read.csv(file = "altmetrics_data.csv", header = TRUE)
-
-# original plots
-dta2 <- dta[ , c(4,5,8,9,10,11,12,14,15,16,17,18,19,20)]
-M <- cor(dta2, use = "complete.obs")
-par(cex = 1)
-corrplot.mixed(M)
-
-
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-
-g <- ggplot(data = dta, aes(x = cited, y = tweets))
-g <- g + geom_point(size = 1.5) + scale_color_manual(values = cbPalette)
-g
-
-
-# models
 library(MASS)
-
-plot(density(dta$cited))
-fit1 <- glm.nb(formula = cited ~ score + open + references + bloggers + tweets + news_outlets + 
-                                 facebook + mendeley + impact + time, data = dta)
-fit2 <- glm.nb(formula = cited ~ score + open + references + bloggers + tweets + news_outlets + 
-                                 facebook + mendeley + impact + time + open:impact, data = dta)
-
-#summary(fit1)
-summary(fit2)
-cbind(rate = exp(fit2$coefficients), CI = exp(confint(fit2)))
-
-plot(density((dta$updated_usage)))
-fit3 <- lm(formula = updated_usage ~ score + open + references + bloggers + tweets + news_outlets + 
-                 facebook + mendeley + impact + time , data = dta)
-fit4 <- lm(formula = updated_usage ~ score + open + references + bloggers + tweets + news_outlets + 
-                 facebook + mendeley + impact + time + open:impact, data = dta)
-
-#summary(fit3)
-summary(fit4)
-cbind(estimate = fit4$coefficients, ci = confint(fit4))
-
-
 ```
 
-Some plots of interest, maybe.
+Point your working directory as appropriate.
+```{r}
+setwd("E:/USU/LEROUX/RESEARCH/TWEETS")
+```
+
+Read in the CSV file.
+```{r}
+dta <- read.csv(file = "altmetrics_data.csv", header = TRUE)
+```
+
+You should have 3,243 obserations and 17 variables (let's just check)
+```{r}
+dim(dta)
+```
+
+Examining citation-related data.
+```{r}
+plot(density(dta$cited))
+
+########## MODEL # 1 - NEGATIVE BINOMIAL ##########
+## no interaction
+## of note: the variable labeled 'open' refers to publicly accessible
+fit1 <- glm.nb(formula = cited ~ open + references + bloggers + tweets + news_outlets + 
+                                 facebook + mendeley + impact + time, data = dta)
+summary(fit1)
+
+## model with interaction (used in the manuscript)
+fit2 <- glm.nb(formula = cited ~ open + references + bloggers + tweets + news_outlets + 
+                                 facebook + mendeley + impact + time + open:impact, data = dta)
+summary(fit2)
+cbind(rate = exp(fit2$coefficients), CI = exp(confint(fit2)))
+```
+
+Now for the access counts.
+```{r, message = FALSE}
+plot(density((dta$updated_usage)))
+
+########## MODEL # 2 - OLS ##########
+## no interaction
+fit3 <- lm(formula = updated_usage ~ open + references + bloggers + tweets + news_outlets + 
+                 facebook + mendeley + impact + time , data = dta)
+summary(fit3)
+
+## model with interaction (used in the manuscript)
+fit4 <- lm(formula = updated_usage ~ open + references + bloggers + tweets + news_outlets + 
+                 facebook + mendeley + impact + time + open:impact, data = dta)
+summary(fit4)
+cbind(estimate = fit4$coefficients, ci = confint(fit4))
+```
+
+Some plots of interest (maybe).
 ```{r}
 smoothScatter(x = dta$updated_usage[dta$open == 0], y = dta$impact[dta$open == 0])
 points(x = dta$updated_usage[dta$open == 1], y = dta$impact[dta$open == 1], col = "red")
+```
 
+We cannot really see a whole lot with the above plot. Let's turn to ggplot2 to get a bit more detail.
+```{r, warning = FALSE}
 commonTheme = list(labs(color = "Density", fill = "Density",
                         x = "Usage", y = "Impact Factor",
                         theme_bw(),
@@ -74,26 +86,26 @@ ggplot(data = dta, aes(x = dta$updated_usage,y = dta$impact)) +
   geom_density2d(aes(color = ..level..)) +
   scale_color_gradient(low = "green", high = "red") + 
   geom_point() + commonTheme
+```
 
+Okay, the above plot was a little better -- let's stratify by publicly accessible for more detail (open versus closed).
+```{r, warning = FALSE}
 dta_closed <- dta[dta$open == 0 , ]
 dta_open <- dta[dta$open == 1 , ]
 
 plot1 <- ggplot(data=dta_closed, aes(x = updated_usage,y = impact)) + ggtitle("Closed Articles") + expand_limits(y = c(0.5, 4.2)) +
-  stat_density2d(aes(fill=..level..,alpha=..level..),geom='polygon',color='black') + 
-  scale_fill_continuous(low="green",high="red") +
-  geom_smooth(method=lm,linetype=2,colour="red",se=F) + 
-  guides(alpha="none") +
+  stat_density2d(aes(fill = ..level..,alpha=..level..),geom = 'polygon', color = 'black') + 
+  scale_fill_continuous(low = "green",high = "red") +
+  geom_smooth(method = lm,linetype=2,colour = "red",se = F) + 
+  guides(alpha = "none") +
   geom_point() + commonTheme
 
 plot2 <- ggplot(data=dta_open, aes(x = updated_usage,y = impact)) + ggtitle("Open Articles") + expand_limits(y = c(0.5 ,4.2)) +
-  stat_density2d(aes(fill=..level..,alpha=..level..),geom='polygon',color='black') + 
-  scale_fill_continuous(low="green",high="red") +
-  geom_smooth(method=lm,linetype=2,colour="red",se=F) + 
-  guides(alpha="none") +
+  stat_density2d(aes(fill = ..level..,alpha = ..level..), geom = 'polygon', color = 'black') + 
+  scale_fill_continuous(low = "green", high = "red") +
+  geom_smooth(method = lm,linetype = 2, colour = "red", se = F) + 
+  guides(alpha = "none") +
   geom_point() + commonTheme
 
 grid.arrange(plot1, plot2, ncol = 2)
-
 ```
-
-
