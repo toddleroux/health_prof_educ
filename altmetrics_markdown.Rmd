@@ -20,7 +20,7 @@ library(MASS)
 
 Point your working directory as appropriate.
 ```{r}
-setwd("E:/USU/LEROUX/RESEARCH/TWEETS")
+setwd("E:/USU/LEROUX/RESEARCH/git/health_prof_educ")
 ```
 
 Read in the CSV file.
@@ -28,7 +28,7 @@ Read in the CSV file.
 dta <- read.csv(file = "altmetrics_data.csv", header = TRUE)
 ```
 
-You should have 3,243 obserations and 17 variables (let's just check)
+You should have 2,486 obserations and 17 variables (let's just check)
 ```{r}
 dim(dta)
 ```
