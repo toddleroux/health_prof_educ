@@ -13,5 +13,3 @@ just input install.packages("PACKAGE_NAME_HERE") command before library commands
 
 direct any questions or concerns to todd leroux (todd.leroux@usuhs.edu).
 thanks for checking this out.
-
-
